@@ -4,6 +4,7 @@
 name = "kkj-mcp-server"
 main = "build/workers/index.js"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 
 # KV Namespace設定
 # 初回セットアップ時は以下のコマンドでKVを作成してください:
@@ -30,9 +31,17 @@ name = "kkj-mcp-server-prod"
 #   { pattern = "api.yourdomain.com/*", zone_id = "your-zone-id" }
 # ]
 
+# 本番環境用KV Namespace
+[[env.production.kv_namespaces]]
+binding = "KKJ_CACHE"
+id = "__KV_NAMESPACE_ID__"
+preview_id = "__KV_NAMESPACE_PREVIEW_ID__"
+
 # 環境変数（本番用）
 [env.production.vars]
 NODE_ENV = "production"
+CACHE_TTL_SEARCH = "3600"
+CACHE_TTL_DETAIL = "86400"
 
 # プレビュー環境設定
 [env.preview]
