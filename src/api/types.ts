@@ -7,6 +7,7 @@
  */
 export interface Notice {
   ResultId: string;
+  Key?: string; // 案件の詳細ページURLを生成するためのキー（Base64エンコード済み）
   ProjectName: string;
   OrganizationName: string;
   CftIssueDate: string;

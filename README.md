@@ -9,7 +9,7 @@
 ### 主な機能
 
 - **search_notices**: 案件の検索（概要情報を10件ずつ返却）
-- **get_notice_details**: 特定案件の詳細情報取得
+- **get_notice_details**: 特定案件の詳細情報取得（官公需ポータルサイトへの直接リンクを含む）
 
 ### 特徴
 
@@ -460,6 +460,10 @@ ResultId "12345" の詳細情報を get_notice_details で取得してくださ�
 - `query`: キーワード検索（例: "建設 AND 東京"）
 - `lg_code`: 都道府県コード（例: "13"）
 
+**レスポンスに含まれる情報**:
+- 案件の詳細情報（全フィールド）
+- `NoticeUrl`: 官公需ポータルサイトの案件詳細ページへの直接リンク（例: `https://www.kkj.go.jp/d/?D=xxxxx&L=ja`）
+
 > **注意**: 官公需APIはResultIdによる直接検索をサポートしていません。
 > キャッシュにResultIdが見つからない場合、フォールバック検索パラメータを使用することで、
 > APIから該当案件を検索し、ResultIdでフィルタリングして取得できます。
@@ -483,13 +487,19 @@ get_notice_details で ResultId "12345" を project_name "学校改修工事" �
 
 ### 検索結果の見方
 
-検索結果には以下の情報が含まれます：
+**検索結果（search_notices）** には以下の情報が含まれます：
 
 - `ResultId`: 案件ID（詳細取得時に使用）
 - `ProjectName`: 案件名
 - `OrganizationName`: 発注機関
 - `CftIssueDate`: 公示日
 - `ExternalDocumentURI`: 公告文書へのリンク（直接アクセス可能）
+
+**詳細情報（get_notice_details）** には上記に加えて：
+
+- `NoticeUrl`: 官公需ポータルサイトの案件詳細ページURL
+- `ProjectDescription`: 案件説明
+- その他の詳細フィールド
 
 ## プロジェクト構成
 

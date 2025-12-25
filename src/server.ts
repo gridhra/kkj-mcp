@@ -152,11 +152,22 @@ export async function startServer(
         // 詳細取得（KVがあれば渡す）
         const result = await handleGetNoticeDetails(validatedArgs, options?.kv);
 
+        // URLを生成（KeyフィールドがあればURLを追加）
+        const noticeUrl = result.Key
+          ? `https://www.kkj.go.jp/d/?D=${result.Key}&L=ja`
+          : undefined;
+
+        // レスポンスにURLを含める
+        const response = {
+          ...result,
+          ...(noticeUrl && { NoticeUrl: noticeUrl })
+        };
+
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2),
+              text: JSON.stringify(response, null, 2),
             },
           ],
         };
