@@ -1,1 +1,36 @@
+# Development files
 dev/*
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+
+# Testing
+coverage/

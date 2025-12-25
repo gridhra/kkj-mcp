@@ -1,0 +1,52 @@
+{
+  "name": "kkj-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Japanese Government Procurement Portal API (官公需情報ポータルサイトAPI)",
+  "type": "module",
+  "bin": {
+    "kkj-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/index.js && chmod +x build/http.js",
+    "watch": "tsc --watch",
+    "start": "node build/index.js",
+    "start:http": "node build/http.js",
+    "dev:http": "SERVER_MODE=http NODE_ENV=development node build/http.js",
+    "inspector": "npx @modelcontextprotocol/inspector node build/index.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch"
+  },
+  "files": [
+    "build"
+  ],
+  "keywords": [
+    "mcp",
+    "japanese-government",
+    "procurement",
+    "api",
+    "official-procurement"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.3.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.16"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

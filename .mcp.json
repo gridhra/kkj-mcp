@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "kkj-portal": {
+      "command": "node",
+      "args": [
+        "build/index.js"
+      ]
+    }
+  }
+}
