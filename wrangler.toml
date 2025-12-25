@@ -1,0 +1,56 @@
+# Cloudflare Workers設定ファイル
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "kkj-mcp-server"
+main = "build/workers/index.js"
+compatibility_date = "2024-12-01"
+
+# KV Namespace設定
+# 初回セットアップ時は以下のコマンドでKVを作成してください:
+# wrangler kv:namespace create "KKJ_CACHE"
+# wrangler kv:namespace create "KKJ_CACHE" --preview
+#
+# ローカル開発: 作成後、表示されるIDを直接ここに設定してください
+# GitHub Actions: KV_NAMESPACE_ID と KV_NAMESPACE_PREVIEW_ID をRepository Variablesに設定
+#                 ワークフロー内で自動的に注入されます
+[[kv_namespaces]]
+binding = "KKJ_CACHE"
+id = "__KV_NAMESPACE_ID__"  # プレースホルダー: GitHub Actionsで置換されます
+preview_id = "__KV_NAMESPACE_PREVIEW_ID__"  # プレースホルダー: GitHub Actionsで置換されます
+
+# 環境変数（非機密情報）
+[vars]
+CACHE_TTL_SEARCH = "3600"        # 検索結果キャッシュ: 1時間
+CACHE_TTL_DETAIL = "86400"       # 案件詳細キャッシュ: 24時間
+
+# 本番環境設定
+[env.production]
+name = "kkj-mcp-server-prod"
+# routes = [
+#   { pattern = "api.yourdomain.com/*", zone_id = "your-zone-id" }
+# ]
+
+# 環境変数（本番用）
+[env.production.vars]
+NODE_ENV = "production"
+
+# プレビュー環境設定
+[env.preview]
+name = "kkj-mcp-server-preview"
+
+# 環境変数（プレビュー用）
+[env.preview.vars]
+NODE_ENV = "development"
+
+# ビルド設定
+# [build]
+# command = "npm run build:workers"
+# cwd = "."
+
+# observability設定（オプション）
+# [observability]
+# enabled = true
+
+# ログレベル設定
+# logpush = false
+# tail_consumers = []

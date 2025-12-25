@@ -123,16 +123,199 @@ curl http://localhost:3000/health
 curl -H "Authorization: Bearer your-api-key" http://localhost:3000/mcp/sse
 ```
 
-### 3. Cloudflare Workersモード（予定）
+### 3. Cloudflare Workersモード
 
 Cloudflare Workersにデプロイして、グローバルに分散されたサーバーレス環境で実行できます。
 
+#### セットアップ手順
+
+1. **KV Namespaceの作成**:
 ```bash
-# Cloudflare Workersへデプロイ
-npm run deploy:cloudflare
+# Wranglerにログイン
+wrangler login
+
+# 本番用KV Namespaceを作成
+wrangler kv:namespace create "KKJ_CACHE"
+# 出力例: { binding = "KKJ_CACHE", id = "abc123..." }
+
+# プレビュー用KV Namespaceを作成
+wrangler kv:namespace create "KKJ_CACHE" --preview
+# 出力例: { binding = "KKJ_CACHE", preview_id = "xyz789..." }
 ```
 
-**注**: Cloudflare Workers対応は開発中です。
+2. **wrangler.tomlの設定**:
+```toml
+# 上記で取得したIDを設定
+[[kv_namespaces]]
+binding = "KKJ_CACHE"
+id = "abc123..."  # 本番用KV ID
+preview_id = "xyz789..."  # プレビュー用KV ID
+```
+
+3. **API認証キーの設定（オプション）**:
+```bash
+wrangler secret put API_KEYS
+# プロンプトで入力: key1,key2,key3
+```
+
+4. **手動デプロイ**:
+```bash
+# プレビュー環境へデプロイ
+npm run dev:workers  # ローカル開発
+
+# 本番環境へデプロイ
+npm run deploy:workers
+```
+
+#### GitHub Actionsによる自動デプロイ
+
+GitHub ActionsでCloudflare Workersへの自動デプロイが設定されています。
+
+##### 必要な設定
+
+GitHub Actionsで自動デプロイするには、以下の手順でCloudflareとGitHubの設定を行います。
+
+#### ステップ1: Cloudflare KV Namespaceの作成
+
+```bash
+# Wranglerにログイン
+wrangler login
+
+# 本番用KV Namespaceを作成
+wrangler kv:namespace create "KKJ_CACHE"
+# 出力例:
+# ⛅️ wrangler 3.101.0
+# ✨ Success!
+# Add the following to your configuration file:
+# { binding = "KKJ_CACHE", id = "0123456789abcdef0123456789abcdef" }
+
+# プレビュー用KV Namespaceを作成
+wrangler kv:namespace create "KKJ_CACHE" --preview
+# 出力例:
+# ✨ Success!
+# Add the following to your configuration file:
+# { binding = "KKJ_CACHE", preview_id = "fedcba9876543210fedcba9876543210" }
+```
+
+**重要**: 出力された `id` と `preview_id` をメモしてください。
+
+#### ステップ2: Cloudflare認証情報の取得
+
+**CLOUDFLARE_API_TOKEN の作成:**
+1. [Cloudflareダッシュボード](https://dash.cloudflare.com/) にログイン
+2. 右上のアバター > **My Profile** をクリック
+3. 左メニュー > **API Tokens** をクリック
+4. **Create Token** をクリック
+5. **Edit Cloudflare Workers** テンプレートの **Use template** をクリック
+6. **Account Resources** で対象アカウントを選択
+7. **Zone Resources** は `All zones` のまま
+8. **Continue to summary** > **Create Token** をクリック
+9. 表示されたトークンをコピー（**再表示できないため必ずメモ**）
+
+**CLOUDFLARE_ACCOUNT_ID の取得:**
+1. [Cloudflareダッシュボード](https://dash.cloudflare.com/) にログイン
+2. 左メニュー > **Workers & Pages** をクリック
+3. 右サイドバーの **Account ID** をコピー
+
+#### ステップ3: GitHub Secrets の設定
+
+**リポジトリ > Settings > Secrets and variables > Actions > Secrets** で以下を追加:
+
+| Secret名 | 値 | 取得方法 |
+|---------|-----|---------|
+| `CLOUDFLARE_API_TOKEN` | `YOUR_CLOUDFLARE_API_TOKEN` | ステップ2で作成したAPIトークン |
+| `CLOUDFLARE_ACCOUNT_ID` | `YOUR_ACCOUNT_ID` | ステップ2で取得したAccount ID |
+| `API_KEYS` | `key1,key2,key3` | 任意の認証キー（カンマ区切り）<br>例: `prod-key-2024,backup-key-2024`<br>**オプション**: 認証不要な場合は設定不要 |
+
+**設定手順:**
+1. GitHub リポジトリページで **Settings** タブをクリック
+2. 左メニュー > **Secrets and variables** > **Actions** をクリック
+3. **Secrets** タブで **New repository secret** をクリック
+4. **Name** に Secret名、**Secret** に値を入力
+5. **Add secret** をクリック
+6. 上記3つのSecretについて繰り返す
+
+#### ステップ4: GitHub Variables の設定
+
+**リポジトリ > Settings > Secrets and variables > Actions > Variables** で以下を追加:
+
+| Variable名 | 値 | 取得方法 |
+|-----------|-----|---------|
+| `KV_NAMESPACE_ID` | `0123456789abcdef...` | ステップ1で取得した本番用KV Namespace ID (`id`) |
+| `KV_NAMESPACE_PREVIEW_ID` | `fedcba9876543210...` | ステップ1で取得したプレビュー用KV Namespace ID (`preview_id`) |
+
+**設定手順:**
+1. **Secrets and variables** > **Actions** ページで **Variables** タブをクリック
+2. **New repository variable** をクリック
+3. **Name** に Variable名、**Value** に値を入力
+4. **Add variable** をクリック
+5. 上記2つのVariableについて繰り返す
+
+#### ステップ5: GitHub Environments の設定（オプション）
+
+承認プロセスを追加する場合（本番デプロイ前に手動承認を必須にする）:
+
+1. **リポジトリ > Settings > Environments** をクリック
+2. **New environment** をクリック
+3. Name: `production` と入力し **Configure environment** をクリック
+4. **Environment protection rules** セクションで設定:
+   - ✅ **Required reviewers** をチェックし、承認者を追加
+   - ✅ **Deployment branches and tags** で `Selected branches and tags` を選択
+   - `main` ブランチを追加
+5. **Save protection rules** をクリック
+
+**注**: Environment設定後、`.github/workflows/deploy-production.yml` の48行目付近のコメントを解除してください:
+```yaml
+# environment: production  ← このコメントを外す
+environment: production
+```
+
+#### 設定確認チェックリスト
+
+- [ ] Cloudflare KV Namespace作成済み（本番用・プレビュー用）
+- [ ] GitHub Secrets 3つ設定済み（CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, API_KEYS）
+- [ ] GitHub Variables 2つ設定済み（KV_NAMESPACE_ID, KV_NAMESPACE_PREVIEW_ID）
+- [ ] GitHub Environments 設定済み（オプション、承認プロセスが必要な場合のみ）
+
+##### デプロイワークフロー
+
+**プレビュー環境へのデプロイ**:
+1. PRに `deploy-preview` ラベルを追加
+2. GitHub Actionsが自動的にプレビュー環境へデプロイ
+3. デプロイURLがPRにコメントされます
+
+**本番環境へのデプロイ**:
+1. mainブランチへマージ（またはpush）
+2. テストが自動実行
+3. テスト成功後、承認待ち状態に
+4. 承認者が手動承認
+5. 本番環境へデプロイ
+
+**手動トリガー**:
+- Actions > Deploy to Cloudflare Workers (Production) > Run workflow
+
+##### デプロイの確認
+
+デプロイ後、以下のエンドポイントでヘルスチェック可能:
+```bash
+# 本番環境
+curl https://kkj-mcp-server-prod.YOUR_ACCOUNT_ID.workers.dev/health
+
+# プレビュー環境
+curl https://kkj-mcp-server-preview.YOUR_ACCOUNT_ID.workers.dev/health
+```
+
+#### 機能
+
+- **KVキャッシュ**: 検索結果と案件詳細をCloudflare KVに保存（TTL付き）
+- **グローバルエッジ**: 世界中のエッジロケーションで実行
+- **自動スケーリング**: トラフィックに応じて自動的にスケール
+- **コスト効率**: 従量課金、無料枠あり
+
+#### 注意事項
+
+- **MCP over HTTP**: 現在、WebStandardStreamableHTTPServerTransportの実装は準備中です。詳細はMCP SDK の最新ドキュメントを参照してください。
+- **Stdioモード**: MCPの完全な機能を使用するには、現在はStdioモードをご利用ください。
 
 ## APIキー認証
 

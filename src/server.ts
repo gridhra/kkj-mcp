@@ -20,10 +20,22 @@ import {
 } from './tools/details.js';
 
 /**
+ * サーバー起動オプション
+ */
+export interface ServerOptions {
+  /** Cloudflare Workers KV Namespace（オプション） */
+  kv?: KVNamespace;
+}
+
+/**
  * MCPサーバーを作成して起動
  * @param transport - トランスポート（Stdio, HTTP等）
+ * @param options - サーバーオプション（KV等）
  */
-export async function startServer(transport: Transport): Promise<Server> {
+export async function startServer(
+  transport: Transport,
+  options?: ServerOptions
+): Promise<Server> {
   const server = new Server(
     {
       name: 'kkj-mcp-server',
@@ -120,8 +132,8 @@ export async function startServer(transport: Transport): Promise<Server> {
         // 引数の検証
         const validatedArgs = SearchNoticesArgsSchema.parse(args) as SearchNoticesArgs;
 
-        // 検索実行
-        const result = await handleSearchNotices(validatedArgs);
+        // 検索実行（KVがあれば渡す）
+        const result = await handleSearchNotices(validatedArgs, options?.kv);
 
         return {
           content: [
@@ -137,8 +149,8 @@ export async function startServer(transport: Transport): Promise<Server> {
         // 引数の検証
         const validatedArgs = GetNoticeDetailsArgsSchema.parse(args) as GetNoticeDetailsArgs;
 
-        // 詳細取得
-        const result = await handleGetNoticeDetails(validatedArgs);
+        // 詳細取得（KVがあれば渡す）
+        const result = await handleGetNoticeDetails(validatedArgs, options?.kv);
 
         return {
           content: [

@@ -1,14 +1,18 @@
 /**
  * 検索ツール実装
- * メモリキャッシュとページネーション機能を提供
+ * メモリキャッシュ（Stdioモード）またはKVキャッシュ（Workersモード）とページネーション機能を提供
  */
 
 import { z } from 'zod';
 import { searchNotices } from '../api/client.js';
 import type { Notice, NoticeListItem, PaginatedSearchResult, SearchParams } from '../api/types.js';
+import {
+  getCachedSearchResults,
+  cacheSearchResults
+} from '../workers/cache.js';
 
 /**
- * 検索結果のキャッシュ
+ * 検索結果のキャッシュ（Stdioモード用）
  */
 let searchCache: Notice[] = [];
 
@@ -43,11 +47,21 @@ export type SearchNoticesArgs = z.infer<typeof SearchNoticesArgsSchema>;
 /**
  * 検索ツールの実装
  * @param args - 検索引数
+ * @param kv - Cloudflare Workers KV Namespace（オプション、Workersモード用）
  * @returns ページネーション付き検索結果
  */
-export async function handleSearchNotices(args: SearchNoticesArgs): Promise<PaginatedSearchResult> {
+export async function handleSearchNotices(
+  args: SearchNoticesArgs,
+  kv?: KVNamespace
+): Promise<PaginatedSearchResult> {
   const page = args.page ?? 1;
 
+  // KVモード（Workers）の場合
+  if (kv) {
+    return await handleSearchNoticesWithKV(args, kv);
+  }
+
+  // メモリキャッシュモード（Stdio）の場合
   // 1ページ目の場合はAPIを呼び出し、キャッシュを更新
   if (page === 1 || searchCache.length === 0) {
     // 検索パラメータの構築
@@ -132,4 +146,84 @@ export function mergeSearchCache(newResults: Notice[]): void {
     searchCache = [...searchCache, ...uniqueNewResults];
     console.error(`Merged ${uniqueNewResults.length} new results into cache (total: ${searchCache.length})`);
   }
+}
+
+/**
+ * KVキャッシュを使用した検索ツールの実装（Workersモード）
+ * @param args - 検索引数
+ * @param kv - Cloudflare Workers KV Namespace
+ * @returns ページネーション付き検索結果
+ */
+async function handleSearchNoticesWithKV(
+  args: SearchNoticesArgs,
+  kv: KVNamespace
+): Promise<PaginatedSearchResult> {
+  const page = args.page ?? 1;
+
+  // 検索パラメータの構築
+  const searchParams: SearchParams = {
+    Count: '100', // 多めに取得してページネーション用に保持
+  };
+
+  // 各パラメータをマッピング
+  if (args.query) searchParams.Query = args.query;
+  if (args.project_name) searchParams.Project_Name = args.project_name;
+  if (args.organization_name) searchParams.Organization_Name = args.organization_name;
+  if (args.lg_code) searchParams.LG_Code = args.lg_code;
+  if (args.category) searchParams.Category = args.category;
+  if (args.procedure_type) searchParams.Procedure_Type = args.procedure_type;
+  if (args.certification) searchParams.Certification = args.certification;
+
+  // 日付パラメータの処理（YYYY-MM形式を自動変換）
+  if (args.cft_issue_date) {
+    let dateParam = args.cft_issue_date;
+
+    // YYYY-MM形式の場合はYYYY-MM-01/に変換
+    if (/^\d{4}-\d{2}$/.test(dateParam)) {
+      dateParam = `${dateParam}-01/`;
+      console.error(`Date format auto-converted: ${args.cft_issue_date} -> ${dateParam}`);
+    }
+
+    searchParams.CFT_Issue_Date = dateParam;
+  }
+
+  // KVキャッシュから検索
+  let cached = await getCachedSearchResults(kv, searchParams);
+
+  // キャッシュミスの場合はAPI呼び出し
+  if (!cached) {
+    console.error('Cache miss, fetching from API...');
+    const results = await searchNotices(searchParams);
+
+    // KVにキャッシュ（1時間）
+    await cacheSearchResults(kv, searchParams, results, 3600);
+
+    cached = {
+      params: searchParams as Record<string, unknown>,
+      results,
+      fetchedAt: Date.now(),
+      totalCount: results.length,
+    };
+  }
+
+  // ページネーション処理
+  const start = (page - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const pagedData = cached.results.slice(start, end) as Notice[];
+
+  // 簡略化された情報のみを返却（トークン効率化）
+  const results: NoticeListItem[] = pagedData.map(item => ({
+    ResultId: item.ResultId,
+    ProjectName: item.ProjectName,
+    OrganizationName: item.OrganizationName,
+    CftIssueDate: item.CftIssueDate,
+    ExternalDocumentURI: item.ExternalDocumentURI,
+  }));
+
+  return {
+    currentPage: page,
+    totalAvailable: cached.totalCount,
+    results,
+    hasNextPage: cached.totalCount > end,
+  };
 }
