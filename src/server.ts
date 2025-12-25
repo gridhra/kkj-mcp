@@ -112,6 +112,11 @@ export async function startServer(
                 description: 'ページ番号（デフォルト: 1）',
                 default: 1,
               },
+              description_length: {
+                type: 'number',
+                description: '案件概要の表示文字数（0で非表示、デフォルト: 100）',
+                default: 100,
+              },
             },
           },
         },

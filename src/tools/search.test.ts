@@ -257,11 +257,11 @@ describe('handleSearchNotices', () => {
       expect(item).toHaveProperty('OrganizationName');
       expect(item).toHaveProperty('CftIssueDate');
       expect(item).toHaveProperty('ExternalDocumentURI');
+      expect(item).toHaveProperty('ProjectDescription');
 
       // 詳細情報のフィールドは含まれない
       expect(item).not.toHaveProperty('FileType');
       expect(item).not.toHaveProperty('FileSize');
-      expect(item).not.toHaveProperty('ProjectDescription');
     });
 
     it('ExternalDocumentURIがundefinedの場合も正しく処理する', async () => {
@@ -294,6 +294,135 @@ describe('handleSearchNotices', () => {
       expect(result2.results[0].ProjectName).toBe('サンプル病院設備更新工事');
 
       expect(mockSearchNotices).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('ProjectDescription切り取り機能', () => {
+    it('デフォルトで100文字に切り取られる', async () => {
+      const longDescription = 'あ'.repeat(150);
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+        ProjectDescription: longDescription,
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+      });
+
+      expect(result.results[0].ProjectDescription).toBe('あ'.repeat(100));
+      expect(result.results[0].ProjectDescription?.length).toBe(100);
+    });
+
+    it('description_lengthパラメータで文字数を変更できる', async () => {
+      const longDescription = 'あ'.repeat(150);
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+        ProjectDescription: longDescription,
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+        description_length: 50,
+      });
+
+      expect(result.results[0].ProjectDescription).toBe('あ'.repeat(50));
+      expect(result.results[0].ProjectDescription?.length).toBe(50);
+    });
+
+    it('description_length=0で非表示になる', async () => {
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+        ProjectDescription: 'これは案件の説明文です',
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+        description_length: 0,
+      });
+
+      expect(result.results[0].ProjectDescription).toBeUndefined();
+    });
+
+    it('ProjectDescriptionが元々ない場合はundefinedのまま', async () => {
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+      });
+
+      expect(result.results[0].ProjectDescription).toBeUndefined();
+    });
+
+    it('指定文字数より短い場合はそのまま表示される', async () => {
+      const shortDescription = 'これは短い説明文です';
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+        ProjectDescription: shortDescription,
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+        description_length: 100,
+      });
+
+      expect(result.results[0].ProjectDescription).toBe(shortDescription);
+    });
+
+    it('サロゲートペア（絵文字など）を含む文字列も正しく切り取られる', async () => {
+      // 絵文字はサロゲートペアで2つのUTF-16コードユニット
+      const descriptionWithEmoji = '🏢'.repeat(60) + 'あ'.repeat(60); // 120文字
+      const mockResults: Notice[] = [{
+        ResultId: '1',
+        ProjectName: 'テスト案件',
+        OrganizationName: 'テスト機関',
+        CftIssueDate: '2025-12-20T00:00:00+09:00',
+        ProjectDescription: descriptionWithEmoji,
+      }];
+
+      mockSearchNotices.mockResolvedValueOnce(mockResults);
+
+      const result = await handleSearchNotices({
+        query: 'テスト',
+        page: 1,
+        description_length: 100,
+      });
+
+      // サロゲートペアを考慮した文字数で100文字に切り取られる
+      const expected = '🏢'.repeat(60) + 'あ'.repeat(40);
+      expect(result.results[0].ProjectDescription).toBe(expected);
+      expect([...(result.results[0].ProjectDescription ?? '')].length).toBe(100);
     });
   });
 });

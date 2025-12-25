@@ -71,4 +71,5 @@ export interface NoticeListItem {
   OrganizationName: string;
   CftIssueDate: string;
   ExternalDocumentURI?: string;
+  ProjectDescription?: string;
 }

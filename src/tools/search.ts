@@ -22,6 +22,26 @@ let searchCache: Notice[] = [];
 const PAGE_SIZE = 10;
 
 /**
+ * 文字列を指定した文字数で切り取る（サロゲートペア対応）
+ * @param text - 切り取る文字列
+ * @param maxLength - 最大文字数（0の場合はundefinedを返す）
+ * @returns 切り取った文字列、または0の場合はundefined
+ */
+function truncateText(text: string | undefined, maxLength: number): string | undefined {
+  if (!text || maxLength === 0) {
+    return undefined;
+  }
+
+  // サロゲートペアを考慮した文字列処理
+  const chars = [...text];
+  if (chars.length <= maxLength) {
+    return text;
+  }
+
+  return chars.slice(0, maxLength).join('');
+}
+
+/**
  * 検索ツールの引数スキーマ
  */
 export const SearchNoticesArgsSchema = z.object({
@@ -40,6 +60,7 @@ export const SearchNoticesArgsSchema = z.object({
     .optional()
     .describe('公示日（例: 2025-12-01/=12月1日以降、/2025-12-31=12月31日まで、2025-12-01/2025-12-31=期間指定、2025-12=12月全体）'),
   page: z.number().int().positive().optional().default(1).describe('ページ番号（デフォルト: 1）'),
+  description_length: z.number().int().min(0).max(1000).optional().default(100).describe('案件概要の表示文字数（0で非表示、デフォルト: 100）'),
 });
 
 export type SearchNoticesArgs = z.infer<typeof SearchNoticesArgsSchema>;
@@ -103,12 +124,14 @@ export async function handleSearchNotices(
   const pagedData = searchCache.slice(start, end);
 
   // 簡略化された情報のみを返却（トークン効率化）
+  const descriptionLength = args.description_length ?? 100;
   const results: NoticeListItem[] = pagedData.map(item => ({
     ResultId: item.ResultId,
     ProjectName: item.ProjectName,
     OrganizationName: item.OrganizationName,
     CftIssueDate: item.CftIssueDate,
     ExternalDocumentURI: item.ExternalDocumentURI,
+    ProjectDescription: truncateText(item.ProjectDescription, descriptionLength),
   }));
 
   return {
@@ -212,12 +235,14 @@ async function handleSearchNoticesWithKV(
   const pagedData = cached.results.slice(start, end) as Notice[];
 
   // 簡略化された情報のみを返却（トークン効率化）
+  const descriptionLength = args.description_length ?? 100;
   const results: NoticeListItem[] = pagedData.map(item => ({
     ResultId: item.ResultId,
     ProjectName: item.ProjectName,
     OrganizationName: item.OrganizationName,
     CftIssueDate: item.CftIssueDate,
     ExternalDocumentURI: item.ExternalDocumentURI,
+    ProjectDescription: truncateText(item.ProjectDescription, descriptionLength),
   }));
 
   return {
