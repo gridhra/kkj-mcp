@@ -7,8 +7,8 @@
     "kkj-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
-    "build:workers": "tsc",
+    "build": "tsc && chmod +x build/index.js && mkdir -p build/knowledge && cp src/knowledge/*.md build/knowledge/",
+    "build:workers": "tsc && mkdir -p build/knowledge && cp src/knowledge/*.md build/knowledge/",
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev:workers": "wrangler dev",

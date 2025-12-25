@@ -18,6 +18,18 @@ import {
   GetNoticeDetailsArgsSchema,
   type GetNoticeDetailsArgs
 } from './tools/details.js';
+import {
+  handleDomainKnowledge,
+  DomainKnowledgeArgsSchema,
+  domainKnowledgeToolDefinition,
+  type DomainKnowledgeArgs
+} from './tools/domain-knowledge.js';
+import {
+  handleInvestigationPrimer,
+  InvestigationPrimerArgsSchema,
+  investigationPrimerToolDefinition,
+  type InvestigationPrimerArgs
+} from './tools/investigation-primer.js';
 
 /**
  * サーバー起動オプション
@@ -117,6 +129,16 @@ export async function startServer(
             required: ['result_id'],
           },
         },
+        {
+          name: domainKnowledgeToolDefinition.name,
+          description: domainKnowledgeToolDefinition.description,
+          inputSchema: domainKnowledgeToolDefinition.inputSchema,
+        },
+        {
+          name: investigationPrimerToolDefinition.name,
+          description: investigationPrimerToolDefinition.description,
+          inputSchema: investigationPrimerToolDefinition.inputSchema,
+        },
       ],
     };
   });
@@ -168,6 +190,40 @@ export async function startServer(
             {
               type: 'text',
               text: JSON.stringify(response, null, 2),
+            },
+          ],
+        };
+      }
+
+      if (name === 'get_domain_knowledge') {
+        // 引数の検証
+        const validatedArgs = DomainKnowledgeArgsSchema.parse(args) as DomainKnowledgeArgs;
+
+        // ドメイン知識取得
+        const result = await handleDomainKnowledge(validatedArgs);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: result.content,
+            },
+          ],
+        };
+      }
+
+      if (name === 'get_investigation_primer') {
+        // 引数の検証
+        const validatedArgs = InvestigationPrimerArgsSchema.parse(args) as InvestigationPrimerArgs;
+
+        // 調査前提知識取得
+        const result = await handleInvestigationPrimer(validatedArgs);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: result.content,
             },
           ],
         };

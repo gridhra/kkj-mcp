@@ -1,0 +1,263 @@
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM環境で__dirnameを取得
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * 知識カテゴリの型定義
+ */
+export type KnowledgeCategory =
+  | 'bidding_methods'
+  | 'timeline_and_flow'
+  | 'qualification_ranking'
+  | 'evaluation_scoring'
+  | 'legal_constraints'
+  | 'search_strategy'
+  | 'glossary'
+  | 'investigation_primer';
+
+/**
+ * 詳細度レベルの型定義
+ */
+export type DetailLevel = 'brief' | 'detailed' | 'comprehensive';
+
+/**
+ * カテゴリとファイルのマッピング
+ */
+const CATEGORY_FILE_MAP: Record<KnowledgeCategory, string> = {
+  bidding_methods: 'bidding-methods.md',
+  timeline_and_flow: 'timelines.md',
+  qualification_ranking: 'qualifications.md',
+  evaluation_scoring: 'evaluation.md',
+  legal_constraints: 'legal-constraints.md',
+  search_strategy: 'search-strategies.md',
+  glossary: 'glossary.md',
+  investigation_primer: 'investigation-primer.md',
+};
+
+/**
+ * カテゴリの日本語名
+ */
+export const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
+  bidding_methods: '入札方式',
+  timeline_and_flow: 'タイムラインと法的期間',
+  qualification_ranking: '資格要件とランク付け',
+  evaluation_scoring: '総合評価落札方式',
+  legal_constraints: '法的制約と最低制限価格',
+  search_strategy: '検索と情報収集の戦略',
+  glossary: '公共事業入札用語集',
+  investigation_primer: 'AI向け調査前提知識',
+};
+
+/**
+ * Markdownから特定のセクションを抽出する
+ * @param markdown Markdownテキスト
+ * @param sectionLevel セクションレベル（'Brief', 'Detailed', 'Comprehensive'）
+ * @returns 抽出されたセクション内容
+ */
+function extractSection(markdown: string, sectionLevel: string): string {
+  const lines = markdown.split('\n');
+  const sectionStart = `## ${sectionLevel}`;
+  let capturing = false;
+  const capturedLines: string[] = [];
+
+  for (const line of lines) {
+    // 次の## レベルのセクションが始まったら終了
+    if (line.startsWith('## ') && line !== sectionStart && capturing) {
+      break;
+    }
+
+    if (line === sectionStart) {
+      capturing = true;
+      continue; // セクションヘッダー自体は含めない
+    }
+
+    if (capturing) {
+      capturedLines.push(line);
+    }
+  }
+
+  return capturedLines.join('\n').trim();
+}
+
+/**
+ * 指定されたカテゴリと詳細度レベルの知識を取得する
+ * @param category 知識カテゴリ
+ * @param detailLevel 詳細度レベル（デフォルト: 'detailed'）
+ * @returns 知識テキスト
+ */
+export function loadKnowledge(
+  category: KnowledgeCategory,
+  detailLevel: DetailLevel = 'detailed'
+): string {
+  const filename = CATEGORY_FILE_MAP[category];
+  if (!filename) {
+    throw new Error(`Unknown knowledge category: ${category}`);
+  }
+
+  const filepath = join(__dirname, filename);
+
+  try {
+    const markdown = readFileSync(filepath, 'utf-8');
+
+    // 詳細度に応じてセクションを抽出
+    const sectionName =
+      detailLevel === 'brief'
+        ? 'Brief'
+        : detailLevel === 'comprehensive'
+          ? 'Comprehensive'
+          : 'Detailed';
+
+    const section = extractSection(markdown, sectionName);
+
+    if (!section) {
+      // セクションが見つからない場合は、Markdownファイル全体を返す
+      // （investigation_primerなど、セクション分けされていないファイル用）
+      return markdown;
+    }
+
+    // カテゴリ名を含めてタイトルを追加
+    return `# ${CATEGORY_LABELS[category]}\n\n${section}`;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to load knowledge: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * 複数のカテゴリの知識を一括取得する
+ * @param categories 知識カテゴリの配列
+ * @param detailLevel 詳細度レベル（デフォルト: 'detailed'）
+ * @returns カテゴリごとの知識のマップ
+ */
+export function loadMultipleKnowledge(
+  categories: KnowledgeCategory[],
+  detailLevel: DetailLevel = 'detailed'
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  for (const category of categories) {
+    result[category] = loadKnowledge(category, detailLevel);
+  }
+
+  return result;
+}
+
+/**
+ * Investigation Primer（調査前提知識）を取得する
+ * investigation_primerは詳細度レベルの概念がないため、専用関数を提供
+ * @param scope 取得範囲（'overview' または 'full_context'）
+ * @returns 知識テキスト
+ */
+export function loadInvestigationPrimer(
+  scope: 'overview' | 'full_context' = 'overview'
+): string {
+  const markdown = loadKnowledge('investigation_primer');
+
+  if (scope === 'overview') {
+    // Overview（概要）セクションと調査の基本心得のみを返す
+    const overviewSection = extractSection(markdown, 'Overview（概要）');
+    const basicsSection = extractSection(markdown, '調査の基本心得');
+
+    return `# AI向け調査前提知識\n\n${overviewSection}\n\n${basicsSection}`;
+  }
+
+  // full_contextの場合は全体を返す
+  return markdown;
+}
+
+/**
+ * 用語集から特定の用語を検索する
+ * @param term 検索する用語
+ * @returns 用語の説明（見つからない場合はnull）
+ */
+export function searchGlossary(term: string): string | null {
+  // 用語集は全セクション（Brief/Detailed/Comprehensive）を検索対象にする
+  const filename = CATEGORY_FILE_MAP['glossary'];
+  const filepath = join(__dirname, filename);
+  const glossary = readFileSync(filepath, 'utf-8');
+  const lines = glossary.split('\n');
+
+  // termを正規表現のメタ文字からエスケープ
+  const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // パターン1: 表形式 | **用語** | 読み | 説明 |
+  const tablePattern = new RegExp(`^\\|\\s*\\*\\*${escapedTerm}\\*\\*\\s*\\|`, 'i');
+
+  // パターン2: 通常の見出し形式 **用語（読み）**
+  const headingPattern = new RegExp(`^\\*\\*${escapedTerm}[（(]`, 'i');
+
+  // パターン3: より一般的なパターン **用語**
+  const generalPattern = new RegExp(`\\*\\*${escapedTerm}\\*\\*`, 'i');
+
+  let capturing = false;
+  const capturedLines: string[] = [];
+  let isTableFormat = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // 表形式のマッチを最優先
+    if (tablePattern.test(line)) {
+      // 表形式の場合は1行だけ返す
+      return line;
+    }
+
+    // 見出し形式または一般的なパターンでマッチ
+    if (headingPattern.test(line) || generalPattern.test(line)) {
+      capturing = true;
+      capturedLines.push(line);
+
+      // 表の中にある場合は isTableFormat をセット
+      if (line.startsWith('|')) {
+        isTableFormat = true;
+      }
+      continue;
+    }
+
+    if (capturing) {
+      // 表形式の場合は1行だけで終了
+      if (isTableFormat) {
+        break;
+      }
+
+      // 次の## セクションヘッダーが見つかったら終了
+      if (line.startsWith('##')) {
+        break;
+      }
+
+      // 次の**で始まる用語が見つかったら終了（通常の見出し形式）
+      if (line.startsWith('**') && !line.startsWith('| **')) {
+        break;
+      }
+
+      // 空行が2つ続いたら終了
+      if (line === '' && lines[i + 1] === '') {
+        break;
+      }
+
+      capturedLines.push(line);
+    }
+  }
+
+  return capturedLines.length > 0 ? capturedLines.join('\n').trim() : null;
+}
+
+/**
+ * すべての利用可能なカテゴリを取得する
+ */
+export function getAllCategories(): KnowledgeCategory[] {
+  return Object.keys(CATEGORY_FILE_MAP) as KnowledgeCategory[];
+}
+
+/**
+ * カテゴリの日本語名を取得する
+ */
+export function getCategoryLabel(category: KnowledgeCategory): string {
+  return CATEGORY_LABELS[category] || category;
+}
