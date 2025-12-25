@@ -1,10 +1,21 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import process from 'process';
 
-// ESM環境で__dirnameを取得
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// __dirnameの取得
+// Cloudflare Workersではimport.meta.urlがundefinedになるため、
+// process.cwd()を使用（Workersでは/bundleに初期化される）
+let __dirname: string;
+if (import.meta.url) {
+  // Node.js環境: import.meta.urlが定義されている
+  const __filename = fileURLToPath(import.meta.url);
+  __dirname = dirname(__filename);
+} else {
+  // Workers環境: import.meta.urlがundefined
+  // process.cwd()は/bundleに初期化されている
+  __dirname = process.cwd() + '/knowledge';
+}
 
 /**
  * 知識カテゴリの型定義
