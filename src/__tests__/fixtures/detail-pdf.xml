@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Results>
+  <SearchResults>
+    <SearchResult>
+      <ResultId>1</ResultId>
+      <Key>dGVzdF9rZXlfZm9yX21vY2tfZGF0YV8wMDE=</Key>
+      <ExternalDocumentURI>https://example.com/notice/001.pdf</ExternalDocumentURI>
+      <ProjectName>テスト第一学校校舎改修工事</ProjectName>
+      <Date>2025-12-24T10:30:00+09:00</Date>
+      <FileType>pdf</FileType>
+      <FileSize>410222</FileSize>
+      <LgCode>99</LgCode>
+      <PrefectureName>サンプル県</PrefectureName>
+      <CityCode>999999</CityCode>
+      <CityName>テスト市</CityName>
+      <OrganizationName>サンプル県テスト市</OrganizationName>
+      <CftIssueDate>2025-12-24T00:00:00+09:00</CftIssueDate>
+      <Category>工事</Category>
+      <ProjectDescription>テスト第一学校の校舎改修工事を実施します。本工事は耐震化対策を含む大規模改修工事です。詳細は添付の仕様書をご確認ください。</ProjectDescription>
+    </SearchResult>
+  </SearchResults>
+</Results>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Results>
+  <SearchResults>
+    <SearchResult>
+      <ResultId>2</ResultId>
+      <Key>dGVzdF9rZXlfZm9yX21vY2tfZGF0YV8wMDI=</Key>
+      <ExternalDocumentURI>https://example.com/portal/notice/002</ExternalDocumentURI>
+      <ProjectName>サンプル病院設備更新工事</ProjectName>
+      <Date>2025-12-23T15:45:00+09:00</Date>
+      <FileType>html</FileType>
+      <FileSize></FileSize>
+      <LgCode>99</LgCode>
+      <PrefectureName>サンプル県</PrefectureName>
+      <OrganizationName>サンプル医療機構テスト病院</OrganizationName>
+      <CftIssueDate>2025-12-23T00:00:00+09:00</CftIssueDate>
+      <Category>工事</Category>
+      <ProcedureType>一般競争入札</ProcedureType>
+      <ProjectDescription>サンプル病院における設備更新工事の実施について。老朽化した設備を最新のものに更新します。</ProjectDescription>
+    </SearchResult>
+  </SearchResults>
+</Results>

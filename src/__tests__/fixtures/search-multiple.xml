@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Results>
+  <SearchResults>
+    <SearchResult>
+      <ResultId>1</ResultId>
+      <ProjectName>テスト第一学校校舎改修工事</ProjectName>
+      <OrganizationName>サンプル県テスト市</OrganizationName>
+      <CftIssueDate>2025-12-24T00:00:00+09:00</CftIssueDate>
+      <ExternalDocumentURI>https://example.com/notice/001.pdf</ExternalDocumentURI>
+    </SearchResult>
+    <SearchResult>
+      <ResultId>2</ResultId>
+      <ProjectName>サンプル病院設備更新工事</ProjectName>
+      <OrganizationName>サンプル医療機構テスト病院</OrganizationName>
+      <CftIssueDate>2025-12-23T00:00:00+09:00</CftIssueDate>
+      <ExternalDocumentURI>https://example.com/notice/002.pdf</ExternalDocumentURI>
+    </SearchResult>
+    <SearchResult>
+      <ResultId>3</ResultId>
+      <ProjectName>公共施設外壁塗装工事</ProjectName>
+      <OrganizationName>サンプル省サンプル部</OrganizationName>
+      <CftIssueDate>2025-12-22T00:00:00+09:00</CftIssueDate>
+    </SearchResult>
+  </SearchResults>
+</Results>

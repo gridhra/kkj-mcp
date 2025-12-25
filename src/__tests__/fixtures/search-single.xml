@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Results>
+  <SearchResults>
+    <SearchResult>
+      <ResultId>1</ResultId>
+      <ProjectName>テスト第一学校校舎改修工事</ProjectName>
+      <OrganizationName>サンプル県テスト市</OrganizationName>
+      <CftIssueDate>2025-12-24T00:00:00+09:00</CftIssueDate>
+      <ExternalDocumentURI>https://example.com/notice/001.pdf</ExternalDocumentURI>
+    </SearchResult>
+  </SearchResults>
+</Results>
