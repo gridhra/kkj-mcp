@@ -5,7 +5,8 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-// import { startServer } from '../server.js'; // TODO: Uncomment when implementing MCP
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { startServer } from '../server.js';
 import type { Env } from './types.js';
 
 /**
@@ -18,8 +19,9 @@ const app = new Hono<{ Bindings: Env }>();
  */
 app.use('/*', cors({
   origin: (origin) => origin, // すべてのオリジンを許可（本番では制限推奨）
-  allowHeaders: ['Authorization', 'Content-Type'],
+  allowHeaders: ['Authorization', 'Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version'],
   allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
   credentials: true,
 }));
 
@@ -30,14 +32,15 @@ app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     service: 'kkj-mcp-server',
-    mode: 'cloudflare-workers'
+    mode: 'cloudflare-workers',
+    transport: 'WebStandardStreamableHTTP'
   });
 });
 
 /**
  * 認証ミドルウェア（MCPエンドポイント用）
  */
-app.use('/mcp/*', async (c, next) => {
+app.use('/mcp', async (c, next) => {
   const apiKeys = c.env.API_KEYS?.split(',').map(k => k.trim()).filter(k => k) || [];
 
   // APIキーが設定されている場合のみ認証を実施
@@ -58,31 +61,20 @@ app.use('/mcp/*', async (c, next) => {
 
 /**
  * MCP エンドポイント
- *
- * 注意: WebStandardStreamableHTTPServerTransportの使用が必要ですが、
- * MCPのHTTP実装は現在開発中のため、以下は概念的な実装です。
- *
- * 実際のデプロイ前に、MCPの公式ドキュメントを参照して
- * 正しい実装に更新してください:
- * https://github.com/modelcontextprotocol/typescript-sdk
+ * WebStandardStreamableHTTPServerTransportを使用
  */
 app.all('/mcp', async (c) => {
   try {
-    // TODO: WebStandardStreamableHTTPServerTransportを使用した実装
-    //
-    // 期待される実装パターン:
-    // const transport = new WebStandardStreamableHTTPServerTransport({
-    //   sessionIdGenerator: () => crypto.randomUUID(),
-    // });
-    //
-    // await startServer(transport, { kv: c.env.KKJ_CACHE });
-    // return transport.handleRequest(c.req.raw);
+    // ステートレスモードでトランスポートを作成
+    // Cloudflare Workersは複数のインスタンスで実行されるため、
+    // セッション管理は行わず、リクエストごとに新しいトランスポートを作成
+    const transport = new WebStandardStreamableHTTPServerTransport();
 
-    return c.json({
-      error: 'Not Implemented',
-      message: 'MCP over HTTP is not yet fully implemented. Please use Stdio mode for now.',
-      note: 'WebStandardStreamableHTTPServerTransport integration is pending MCP SDK updates.'
-    }, 501);
+    // MCPサーバーを作成して接続
+    await startServer(transport, { kv: c.env.KKJ_CACHE });
+
+    // リクエストを処理
+    return transport.handleRequest(c.req.raw);
   } catch (error) {
     console.error('MCP endpoint error:', error);
     return c.json({

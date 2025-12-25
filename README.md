@@ -74,6 +74,43 @@ Claude Desktop設定ファイルを編集します：
 
 設定後、Claude Desktopを再起動してください。
 
+#### Manusとの統合（リモートMCPサーバー）
+
+Cloudflare Workersにデプロイした後、Manusの設定ファイルで以下のように設定します：
+
+**macOS/Linux**: `~/.config/manus/config.json`（または Manusの設定ファイル）
+
+```json
+{
+  "mcpServers": {
+    "kkj-portal": {
+      "url": "https://kkj-mcp-server-prod.houscape.workers.dev/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}
+```
+
+**認証が必要な場合**:
+
+```json
+{
+  "mcpServers": {
+    "kkj-portal": {
+      "url": "https://kkj-mcp-server-prod.houscape.workers.dev/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**注意**:
+- URLは実際にデプロイされたWorkers URLに置き換えてください
+- API_KEYSを設定している場合は、`Authorization`ヘッダーに有効なAPIキーを設定してください
+
 ### 2. HTTPサーバーモード
 
 HTTPサーバーとして起動し、Web経由でMCPサーバーにアクセスできます。
@@ -123,9 +160,9 @@ curl http://localhost:3000/health
 curl -H "Authorization: Bearer your-api-key" http://localhost:3000/mcp/sse
 ```
 
-### 3. Cloudflare Workersモード
+### 3. Cloudflare Workersモード（リモートMCPサーバー）
 
-Cloudflare Workersにデプロイして、グローバルに分散されたサーバーレス環境で実行できます。
+Cloudflare Workersにデプロイして、グローバルに分散されたサーバーレス環境で実行できます。WebStandardStreamableHTTPServerTransportを使用し、Manus、Claude Desktop（mcp-remoteプロキシ経由）、その他のMCPクライアントから接続可能です。
 
 #### セットアップ手順
 
@@ -307,15 +344,21 @@ curl https://kkj-mcp-server-preview.YOUR_ACCOUNT_ID.workers.dev/health
 
 #### 機能
 
+- **WebStandardStreamableHTTP**: MCPの最新トランスポートを使用（Streamable HTTP）
 - **KVキャッシュ**: 検索結果と案件詳細をCloudflare KVに保存（TTL付き）
 - **グローバルエッジ**: 世界中のエッジロケーションで実行
 - **自動スケーリング**: トラフィックに応じて自動的にスケール
 - **コスト効率**: 従量課金、無料枠あり
+- **リモートアクセス**: インターネット経由でどこからでもアクセス可能
 
-#### 注意事項
+#### エンドポイント
 
-- **MCP over HTTP**: 現在、WebStandardStreamableHTTPServerTransportの実装は準備中です。詳細はMCP SDK の最新ドキュメントを参照してください。
-- **Stdioモード**: MCPの完全な機能を使用するには、現在はStdioモードをご利用ください。
+デプロイ後、以下のエンドポイントが利用可能です：
+
+- `GET /health` - ヘルスチェック
+- `GET /mcp` - MCP SSEストリーム確立
+- `POST /mcp` - MCPリクエスト送信
+- `DELETE /mcp` - MCPセッション終了
 
 ## APIキー認証
 
