@@ -34,3 +34,6 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Generated files
+src/knowledge/data.ts

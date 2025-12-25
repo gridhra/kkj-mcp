@@ -7,8 +7,9 @@
     "kkj-mcp": "./build/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x build/index.js && mkdir -p build/knowledge && cp src/knowledge/*.md build/knowledge/",
-    "build:workers": "tsc && mkdir -p build/knowledge && cp src/knowledge/*.md build/knowledge/",
+    "generate:knowledge": "tsx scripts/generate-knowledge-data.ts",
+    "build": "npm run generate:knowledge && tsc && chmod +x build/index.js",
+    "build:workers": "npm run generate:knowledge && tsc",
     "watch": "tsc --watch",
     "start": "node build/index.js",
     "dev:workers": "wrangler dev",
@@ -42,6 +43,7 @@
     "@types/node": "^22.10.0",
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.0",
     "vitest": "^4.0.16",
     "wrangler": "^4.54.0"
