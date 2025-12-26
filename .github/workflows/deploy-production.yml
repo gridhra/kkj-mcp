@@ -47,6 +47,8 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: test
+    # Repository VariableでDISABLE_AUTO_DEPLOY=trueが設定されている場合はスキップ
+    if: vars.DISABLE_AUTO_DEPLOY != 'true'
 
     permissions:
       contents: read

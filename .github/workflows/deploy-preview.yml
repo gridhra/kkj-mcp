@@ -9,8 +9,8 @@ jobs:
   deploy-preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    # "deploy-preview"ラベルが付いているPRのみ実行
-    if: contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+    # "deploy-preview"ラベルが付いており、かつ自動デプロイが無効化されていないPRのみ実行
+    if: contains(github.event.pull_request.labels.*.name, 'deploy-preview') && vars.DISABLE_AUTO_DEPLOY != 'true'
 
     permissions:
       contents: read
