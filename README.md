@@ -1,6 +1,11 @@
-# KKJ MCP Server
+# KKJ Portal MCP Server
 
-官公需情報ポータルサイトAPI（http://www.kkj.go.jp/api/）のMCPサーバー実装です。
+[官公需情報ポータルサイトAPI](http://www.kkj.go.jp/api/)のMCPサーバー実装です。
+
+現状は下記に通りの使用方法を想定しています。
+
+- cloneしてローカルで起動する
+- ForkしてGitHub Repositoryに必要なenvironment variables, secretsを設定、Cloudflare Workers + KVでセルフホストする
 
 ## 概要
 
@@ -84,7 +89,7 @@ Cloudflare Workersにデプロイした後、Manusの設定ファイルで以下
 {
   "mcpServers": {
     "kkj-portal": {
-      "url": "https://kkj-mcp-server-prod.houscape.workers.dev/mcp",
+      "url": "https://write-your-domain/mcp",
       "transport": "streamable-http"
     }
   }
@@ -97,7 +102,7 @@ Cloudflare Workersにデプロイした後、Manusの設定ファイルで以下
 {
   "mcpServers": {
     "kkj-portal": {
-      "url": "https://kkj-mcp-server-prod.houscape.workers.dev/mcp",
+      "url": "https://write-your-domain/mcp",
       "transport": "streamable-http",
       "headers": {
         "Authorization": "Bearer your-api-key-here"
@@ -288,32 +293,6 @@ wrangler kv:namespace create "KKJ_CACHE" --preview
 4. **Add variable** をクリック
 5. 上記2つのVariableについて繰り返す
 
-#### ステップ5: GitHub Environments の設定（オプション）
-
-承認プロセスを追加する場合（本番デプロイ前に手動承認を必須にする）:
-
-1. **リポジトリ > Settings > Environments** をクリック
-2. **New environment** をクリック
-3. Name: `production` と入力し **Configure environment** をクリック
-4. **Environment protection rules** セクションで設定:
-   - ✅ **Required reviewers** をチェックし、承認者を追加
-   - ✅ **Deployment branches and tags** で `Selected branches and tags` を選択
-   - `main` ブランチを追加
-5. **Save protection rules** をクリック
-
-**注**: Environment設定後、`.github/workflows/deploy-production.yml` の48行目付近のコメントを解除してください:
-```yaml
-# environment: production  ← このコメントを外す
-environment: production
-```
-
-#### 設定確認チェックリスト
-
-- [ ] Cloudflare KV Namespace作成済み（本番用・プレビュー用）
-- [ ] GitHub Secrets 3つ設定済み（CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, API_KEYS）
-- [ ] GitHub Variables 2つ設定済み（KV_NAMESPACE_ID, KV_NAMESPACE_PREVIEW_ID）
-- [ ] GitHub Environments 設定済み（オプション、承認プロセスが必要な場合のみ）
-
 ##### デプロイワークフロー
 
 **プレビュー環境へのデプロイ**:
@@ -365,8 +344,8 @@ curl https://kkj-mcp-server-preview.YOUR_ACCOUNT_ID.workers.dev/health
 ### 認証の動作
 
 - **本番環境（NODE_ENV=production）**: APIキーが必須
-- **開発環境（NODE_ENV=development）**: localhostからのアクセスは認証不要
-- **Stdioモード**: 認証なし（ローカル実行のため）
+- **開発環境（NODE_ENV=development）**: 開発系環境からのアクセスでは認証不要
+- **Stdioモード**: 認証なし（基本的にローカル実行のため）
 
 ### APIキーの設定
 
@@ -471,6 +450,7 @@ ResultId "12345" の詳細情報を get_notice_details で取得してくださ�
 #### 使用例
 
 **基本的な使用方法（キャッシュから取得）**:
+
 ```
 # 先に検索を実行
 search_notices で「学校」を検索
@@ -480,6 +460,7 @@ get_notice_details で ResultId "12345" の詳細を取得
 ```
 
 **フォールバック検索を使用**:
+
 ```
 # キャッシュにない場合でも、追加パラメータで取得可能
 get_notice_details で ResultId "12345" を project_name "学校改修工事" で取得
@@ -487,13 +468,14 @@ get_notice_details で ResultId "12345" を project_name "学校改修工事" �
 
 ### 検索結果の見方
 
-**検索結果（search_notices）** には以下の情報が含まれます：
+検索結果（search_notices）には以下の情報が含まれます：
 
 - `ResultId`: 案件ID（詳細取得時に使用）
 - `ProjectName`: 案件名
 - `OrganizationName`: 発注機関
 - `CftIssueDate`: 公示日
 - `ExternalDocumentURI`: 公告文書へのリンク（直接アクセス可能）
+- `ProjectDescription`: 案件説明（ただしデフォルトは100文字まででカット。これはtoken量抑制のために、list系では妥当な処理と認識。完全な`ProjectDescription`は`get_notice_detail`を利用して取得することを想定）
 
 **詳細情報（get_notice_details）** には上記に加えて：
 
@@ -567,8 +549,6 @@ GitHub Actionsによる自動化：
   - ビルド検証
   - カバレッジレポート
 
-- **依存関係更新**:
-  - Dependabotによる週次自動更新
 
 ## トラブルシューティング
 
@@ -621,18 +601,10 @@ node build/index.js
 SERVER_MODE=http PORT=3000 node build/http.js
 ```
 
-## セキュリティ
+## セキュリティ注意事項
 
 - APIキーは環境変数で管理し、コードにハードコードしない
 - `.env`ファイルは`.gitignore`に追加済み
-- 本番環境では必ずHTTPS経由でアクセス
-- Cloudflare Workersは自動的にHTTPSを提供
-
-## パフォーマンス
-
-- メモリキャッシュによる高速な詳細取得
-- ページネーションによる効率的なデータ処理
-- 検索結果は最小限の情報のみを返してトークン使用量を削減
 
 ## ライセンス
 
@@ -643,12 +615,10 @@ MIT
 - [官公需情報ポータルサイト](http://www.kkj.go.jp/)
 - [MCP Documentation](https://modelcontextprotocol.io/)
 - [MCP SDK for TypeScript](https://github.com/modelcontextprotocol/typescript-sdk)
-- [GitHub Repository](https://github.com/your-username/kkj-mcp-server)
+- [GitHub Repository](https://github.com/gridhra/kkj-mcp)
 
-## 貢献
+## Contribute
 
-プルリクエストを歓迎します！大きな変更の場合は、まずissueを開いて変更内容を議論してください。
-
-## サポート
-
-問題が発生した場合は、GitHubのissueで報告してください。
+@gridhra 個人とその所属組織での利用を想定したもの、という前提でお考え頂きたいですが、PRはもちろん歓迎いたします
+大きな変更の場合は、まずissueを開いて変更内容を議論してください
+何か不具合がある場合もIssueにてお伝えください
